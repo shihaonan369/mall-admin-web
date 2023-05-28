@@ -1,0 +1,51 @@
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - v**
+env:
+  host: 0.0.0.0
+  port: 9993
+
+jobs:
+  build:
+    name: Build And Upload Artifact
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v3
+        with:
+          node-version: 12.14.0
+          cache: npm
+      - name: Install Dependencies
+        run: npm i
+      - name: Build Project
+        run: npm run build
+      - name: Upload a Build Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: mall-admin-web
+          path: ./dist
+  deploy:
+      name: Deploy Latest Artifact
+      runs-on: ubuntu-latest
+      environment: dev
+      needs: build
+      steps:
+        - name: Download a Build Artifact
+          uses: actions/download-artifact@v3
+          with:
+            name: mall-admin-web
+        - name: Copy Aritifact to Server
+          uses: appleboy/scp-action@v0.1.4
+          with:
+            host: ${{ secrets.HOST }}
+            username: ${{ secrets.SERVER_SSH_USER }}
+            password: ${{ secrets.SERVER_SSH_PASSWORD }}
+            port: 22
+            overwrite: true
+            source: .
+            target: /home/mall-admin-web
+
